@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algebra Tiles | Quadratic Factorization</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>Algebra<span>Tiles</span></h1>
+            </div>
+
+            <div class="control-panel glass-panel">
+                <div class="input-group">
+                    <label for="equation-a">Quadratic Equation ($ax^2 + bx + c$)</label>
+                    <div class="equation-inputs">
+                        <div class="input-wrapper">
+                            <input type="number" id="coeff-a" value="1" min="1" max="5">
+                            <span>$x^2$</span>
+                        </div>
+                        <span class="operator">+</span>
+                        <div class="input-wrapper">
+                            <input type="number" id="coeff-b" value="5" min="-10" max="10">
+                            <span>$x$</span>
+                        </div>
+                        <span class="operator">+</span>
+                        <div class="input-wrapper">
+                            <input type="number" id="coeff-c" value="6" min="-10" max="10">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="btn-solve" class="btn primary"
+                        style="background: var(--secondary); border: 1px solid rgba(255,255,255,0.2); width: 100%;">Solve
+                        (Animate)</button>
+                    <button id="btn-check" class="btn success" style="width: 100%;">Check Solution</button>
+                    <button id="btn-reset" class="btn secondary" style="width: 100%;">Clear All</button>
+                </div>
+
+                <div id="feedback" class="feedback-area hidden">
+                    <p class="message">Perfect Rectangle formed!</p>
+                </div>
+            </div>
+
+            <!-- Tile Bank Logic -->
+            <div class="legend glass-panel">
+
+                <h3>Tile Bank</h3>
+
+                <div class="control-group">
+                    <label
+                        style="display: flex; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 0.9rem;">
+                        <input type="checkbox" id="chk-negative" style="width: auto; margin-right: 10px;">
+                        <span>Negative</span>
+                    </label>
+                </div>
+
+                <div class="palette" id="tile-palette"
+                    style="display: flex; flex-direction: row; gap: 15px; margin-top: 15px; align-items: flex-end; padding-bottom: 10px;">
+                    <div class="palette-item" data-type="x2"
+                        style="width: 50px; height: 50px; background: var(--tile-x2); border: 2px solid rgba(255,255,255,0.4); cursor: grab; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 4px; color: black;">
+                        x²</div>
+                    <div class="palette-item" data-type="x"
+                        style="width: 20px; height: 50px; background: var(--tile-x); border: 2px solid rgba(255,255,255,0.4); cursor: grab; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 4px; color: black;">
+                        x</div>
+                    <div class="palette-item" data-type="one"
+                        style="width: 20px; height: 20px; background: var(--tile-1); border: 2px solid rgba(255,255,255,0.4); cursor: grab; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 2px; color: black;">
+                        1</div>
+                </div>
+
+                <div class="trash-zone" id="trash-zone"
+                    style="margin-top: 10px; padding: 15px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 8px; text-align: center; color: rgba(255,255,255,0.5);">
+                    Drag here to Delete
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            <canvas id="app-canvas"></canvas>
+            <div class="overlay-ui">
+                <div class="readout" id="area-readout">Area: 0</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MathJax for nice rendering of the equation labels if needed, though we primarily use canvas -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
