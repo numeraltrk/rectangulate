@@ -281,7 +281,9 @@ canvas {
     font-family: 'Outfit', monospace;
     font-size: 1.2rem;
     color: var(--text-main);
-}/* Toolbar */
+}
+
+/* Toolbar */
 .toolbar {
     position: absolute;
     top: 2rem;
@@ -308,7 +310,9 @@ canvas {
 .overlay-ui {
     top: auto;
     bottom: 2rem;
-}/* Feedback Popup */
+}
+
+/* Feedback Popup */
 .feedback-area {
     position: fixed;
     top: 50%;
@@ -354,6 +358,81 @@ canvas {
     line-height: 1;
 }
 
+
 .feedback-area .close-btn:hover {
     color: var(--text-main);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        max-height: 45vh;
+        order: 2;
+        /* Sidebar at bottom */
+        border-right: none;
+        border-top: 1px solid var(--glass-border);
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .workspace {
+        flex: 1;
+        height: 55vh;
+        /* Ensure canvas has space */
+        order: 1;
+        /* Workspace at top */
+    }
+
+    .logo h1 {
+        font-size: 1.25rem;
+    }
+
+    /* Adjust controls for smaller space */
+    .control-panel {
+        padding: 1rem;
+    }
+
+    .equation-inputs {
+        font-size: 1rem;
+    }
+
+    .input-wrapper input {
+        width: 40px;
+        font-size: 0.9rem;
+    }
+
+    /* .palette-item {
+         Ensure touch targets are reasonable 
+    } */
+
+    /* Toolbar adjustments */
+    .toolbar {
+        top: 1rem;
+        padding: 0.5rem 1rem;
+        width: 90%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .toolbar .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    /* Ensure trash zone is visible */
+    .trash-zone {
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 0.8rem;
+    }
+
+    /* Hide some less critical helpers if needed, or make them smaller */
+    .hint {
+        display: none;
+    }
 }

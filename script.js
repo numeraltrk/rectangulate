@@ -1,7 +1,7 @@
 /**
  * Constants and Configuration
  */
-const TILE_CONFIG = {
+let TILE_CONFIG = {
     // Visual multiplier (pixels per unit)
     UNIT: 60,
     // Gap for initial layout
@@ -18,6 +18,21 @@ const TILE_CONFIG = {
         stroke: 'rgba(255,255,255,0.4)'
     }
 };
+
+const updateTileConfig = () => {
+    if (window.innerWidth <= 768) {
+        // Mobile Sizing
+        TILE_CONFIG.SIZES.x = 100;
+        TILE_CONFIG.SIZES.u = 20;
+    } else {
+        // Desktop Sizing
+        TILE_CONFIG.SIZES.x = 200;
+        TILE_CONFIG.SIZES.u = 25;
+    }
+};
+
+// Initialize config based on current width
+updateTileConfig();
 
 /**
  * Represents a single Algebra Tile
@@ -136,7 +151,17 @@ class App {
     resize() {
         this.canvas.width = this.canvas.parentElement.clientWidth;
         this.canvas.height = this.canvas.parentElement.clientHeight;
+        updateTileConfig(); // Check scale on resize
+        this.updateAllTileDimensions(); // Update existing tiles
         this.requestRender();
+    }
+
+    updateAllTileDimensions() {
+        this.tiles.forEach(tile => {
+            tile.uSize = TILE_CONFIG.SIZES.u;
+            tile.xSize = TILE_CONFIG.SIZES.x;
+            tile.updateDimensions();
+        });
     }
 
     setupInputListeners() {
@@ -202,6 +227,47 @@ class App {
         window.addEventListener('mousemove', this.handleMouseMove.bind(this)); // Window for drag out
         window.addEventListener('mouseup', this.handleMouseUp.bind(this));
         this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+
+        // Touch Listeners
+        this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+        window.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+        window.addEventListener('touchend', this.handleTouchEnd.bind(this));
+    }
+
+    handleTouchStart(e) {
+        if (e.touches.length > 1) return; // Ignore multi-touch
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+
+        // Double Tap Detection
+        const now = Date.now();
+        if (this.lastTap && (now - this.lastTap) < 300) {
+            this.handleDoubleClick(mouseEvent);
+            this.lastTap = null;
+        } else {
+            this.lastTap = now;
+            this.handleMouseDown(mouseEvent);
+        }
+    }
+
+    handleTouchMove(e) {
+        if (e.touches.length > 1) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        this.handleMouseMove(mouseEvent);
+    }
+
+    handleTouchEnd(e) {
+        const mouseEvent = new MouseEvent('mouseup', {});
+        this.handleMouseUp(mouseEvent);
     }
 
     spawnTileFromMouse(e, type) {
@@ -427,9 +493,9 @@ class App {
         }
     }
 
-    validateArrangement() {
+    validateArrangement(silent = false) {
         if (this.tiles.length === 0) {
-            this.showFeedback("No tiles to check!", false);
+            if (!silent) this.showFeedback("No tiles to check!", false);
             return;
         }
 
@@ -471,7 +537,7 @@ class App {
         if (!hasNegative) {
             // Tolerance for gaps
             if (Math.abs(bboxArea - totalTileArea) < 200) {
-                this.showFeedback("Great job! You formed a perfect rectangle.", true);
+                if (!silent) this.showFeedback("Great job! You formed a perfect rectangle.", true);
                 return;
             }
         }
@@ -543,7 +609,7 @@ class App {
 
                             // Allow some slop
                             if (Math.abs(expectedNegArea - actualNegArea) < 200) {
-                                this.showFeedback("Valid Overlap Arrangement! Result area matches the equation.", true);
+                                if (!silent) this.showFeedback("Valid Overlap Arrangement! Result area matches the equation.", true);
                                 return;
                             }
                         }
@@ -552,7 +618,7 @@ class App {
             }
         }
 
-        this.showFeedback("Not a valid rectangle or correct solution.", false);
+        if (!silent) this.showFeedback("Not a valid rectangle or correct solution.", false);
     }
 
     checkSolution() {
@@ -632,7 +698,7 @@ class App {
                 requestAnimationFrame(this.render.bind(this));
             } else {
                 this.isAnimating = false;
-                this.validateArrangement(); // Auto-validate after solve
+                this.validateArrangement(true); // Auto-validate silently after solve
             }
         }
 
