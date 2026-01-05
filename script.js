@@ -187,11 +187,25 @@ class App {
         // Palette Listeners
         const paletteItems = document.querySelectorAll('.palette-item');
         paletteItems.forEach(item => {
-            item.addEventListener('mousedown', (e) => {
-                e.preventDefault(); // Prevent text selection
+            const handleStart = (e) => {
+                e.preventDefault(); // Prevent scrolling/selection
                 const type = item.getAttribute('data-type');
-                this.spawnTileFromMouse(e, type);
-            });
+
+                // Get coordinates (Touch or Mouse)
+                let clientX, clientY;
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+
+                this.spawnTileFromMouse({ clientX, clientY }, type);
+            };
+
+            item.addEventListener('mousedown', handleStart);
+            item.addEventListener('touchstart', handleStart, { passive: false });
         });
 
         // Feedback Close Button
@@ -256,7 +270,12 @@ class App {
 
     handleTouchMove(e) {
         if (e.touches.length > 1) return;
-        e.preventDefault();
+
+        // Only prevent default if we are actively dragging a tile
+        if (this.dragTarget) {
+            e.preventDefault();
+        }
+
         const touch = e.touches[0];
         const mouseEvent = new MouseEvent('mousemove', {
             clientX: touch.clientX,
