@@ -281,4 +281,79 @@ canvas {
     font-family: 'Outfit', monospace;
     font-size: 1.2rem;
     color: var(--text-main);
+}/* Toolbar */
+.toolbar {
+    position: absolute;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.toolbar .btn {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+/* Adjust overlay UI to not overlap toolbar */
+.overlay-ui {
+    top: auto;
+    bottom: 2rem;
+}/* Feedback Popup */
+.feedback-area {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    padding: 2rem;
+    background: var(--bg-grade-1);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    z-index: 1000;
+    text-align: center;
+    display: none;
+    /* Default hidden */
+}
+
+/* Override existing hidden/show logic if needed, but the class-based toggle handles display */
+.feedback-area.hidden {
+    display: none;
+}
+
+.feedback-area.show {
+    display: block;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.feedback-area .message {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--text-main);
+}
+
+.feedback-area .close-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.feedback-area .close-btn:hover {
+    color: var(--text-main);
 }

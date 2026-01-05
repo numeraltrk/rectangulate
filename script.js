@@ -15,8 +15,7 @@ const TILE_CONFIG = {
         x: '#4ade80',
         one: '#60a5fa',
         neg: '#ef4444',
-        stroke: 'rgba(255,255,255,0.4)',
-        selected: 'white'
+        stroke: 'rgba(255,255,255,0.4)'
     }
 };
 
@@ -142,6 +141,10 @@ class App {
 
     setupInputListeners() {
 
+        document.getElementById('btn-confirm-equation').addEventListener('click', () => {
+            this.updateEquationDisplay();
+        });
+
         document.getElementById('btn-solve').addEventListener('click', () => {
             this.solveAndAnimate();
         });
@@ -164,6 +167,11 @@ class App {
                 const type = item.getAttribute('data-type');
                 this.spawnTileFromMouse(e, type);
             });
+        });
+
+        // Feedback Close Button
+        document.querySelector('.feedback-area .close-btn').addEventListener('click', () => {
+            this.hideFeedback();
         });
     }
 
@@ -233,12 +241,12 @@ class App {
         this.tiles = [];
         let startX = 50;
         let startY = 50;
-        const gap = 10;
+        const gap = TILE_CONFIG.GAP;
 
         // Add x^2 tiles
         for (let i = 0; i < Math.abs(a); i++) {
             this.tiles.push(new Tile('x2', startX, startY, a < 0));
-            startX += TILE_CONFIG.SIZES.x + 10; // Simple layout spacing
+            startX += TILE_CONFIG.SIZES.x + gap; // Simple layout spacing
         }
 
         // Add x tiles
@@ -298,15 +306,15 @@ class App {
         if (this.dragTarget) {
 
             // Check Sidebar (Delete Zone)
-            const sidebar = document.querySelector('.sidebar');
-            const sidebarRect = sidebar.getBoundingClientRect();
+            const trashZone = document.getElementById('trash-zone');
+            const trashRect = trashZone.getBoundingClientRect();
 
             // Client coords
             const mx = e.clientX;
             const my = e.clientY;
 
-            if (mx >= sidebarRect.left && mx <= sidebarRect.right &&
-                my >= sidebarRect.top && my <= sidebarRect.bottom) {
+            if (mx >= trashRect.left && mx <= trashRect.right &&
+                my >= trashRect.top && my <= trashRect.bottom) {
                 // Delete
                 const idx = this.tiles.indexOf(this.dragTarget);
                 if (idx > -1) this.tiles.splice(idx, 1);
@@ -318,6 +326,37 @@ class App {
             this.dragTarget = null;
             this.requestRender();
             this.checkSolution();
+        }
+    }
+
+    updateEquationDisplay() {
+        const a = parseInt(document.getElementById('coeff-a').value) || 0;
+        const b = parseInt(document.getElementById('coeff-b').value) || 0;
+        const c = parseInt(document.getElementById('coeff-c').value) || 0;
+
+        // Format terms
+        const termA = a !== 0 ? (a === 1 ? 'x^2' : (a === -1 ? '-x^2' : `${a}x^2`)) : '';
+
+        let termB = '';
+        if (b !== 0) {
+            if (b > 0) termB = a !== 0 ? ` + ${b === 1 ? 'x' : `${b}x`}` : `${b === 1 ? 'x' : `${b}x`}`;
+            else termB = ` - ${Math.abs(b) === 1 ? 'x' : `${Math.abs(b)}x`}`;
+        }
+
+        let termC = '';
+        if (c !== 0) {
+            if (c > 0) termC = (a !== 0 || b !== 0) ? ` + ${c}` : `${c}`;
+            else termC = ` - ${Math.abs(c)}`;
+        }
+
+        let eq = `${termA}${termB}${termC}`;
+        if (!eq) eq = '0';
+
+        const display = document.getElementById('equation-display');
+        display.innerHTML = `$${eq}$`;
+
+        if (window.MathJax) {
+            MathJax.typesetPromise([display]);
         }
     }
 
@@ -609,6 +648,8 @@ class App {
         const a = parseInt(document.getElementById('coeff-a').value) || 1;
         const b = parseInt(document.getElementById('coeff-b').value) || 5;
         const c = parseInt(document.getElementById('coeff-c').value) || 6;
+
+        this.generateTiles(a, b, c);
 
         const [m, n] = this.getClosestFactors(a);
 
