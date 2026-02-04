@@ -581,7 +581,7 @@ class App {
                     let bestErr = Infinity;
                     let bestA = 0, bestB = 0;
                     for (let a = 1; a <= 5; a++) {
-                        for (let b = 0; b <= 10; b++) {
+                        for (let b = 0; b <= 15; b++) {
                             const est = a * X_SIZE + b * U_SIZE;
                             const err = Math.abs(est - pixels);
                             if (err < bestErr) { bestErr = err; bestA = a; bestB = b; }
@@ -598,8 +598,8 @@ class App {
                 // We assume clean cuts: Final Factors = (baseW - p)(baseH - q)
                 // We check small integer p, q.
 
-                for (let p = 0; p <= 5; p++) {
-                    for (let q = 0; q <= 5; q++) {
+                for (let p = 0; p <= 12; p++) {
+                    for (let q = 0; q <= 12; q++) {
                         if (p === 0 && q === 0) continue;
 
                         // Proposed Factors
@@ -729,6 +729,7 @@ class App {
             tile.draw(this.ctx);
         }
     }
+
     solveAndAnimate() {
         const a = parseInt(document.getElementById('coeff-a').value) || 1;
         const b = parseInt(document.getElementById('coeff-b').value) || 5;
@@ -736,34 +737,50 @@ class App {
 
         this.generateTiles(a, b, c);
 
-        const [m, n] = this.getClosestFactors(a);
+        const [m_abs, n_abs] = this.getClosestFactors(a);
 
-        let p = 0, q = 0;
+        // Try sign configurations for m, n
+        const configs = [];
+        if (a >= 0) {
+            configs.push({ m: m_abs, n: n_abs });
+        } else {
+            configs.push({ m: -m_abs, n: n_abs }); // One neg
+            configs.push({ m: m_abs, n: -n_abs });
+        }
+
+        let m = 0, n = 0, p = 0, q = 0;
         let found = false;
 
         const limit = Math.abs(c) === 0 ? Math.abs(b) : Math.abs(c);
 
-        for (let i = -limit; i <= limit; i++) {
-            let currentP = i;
-            let currentQ;
+        // Grid search for valid factors
+        for (const config of configs) {
+            const tm = config.m;
+            const tn = config.n;
 
-            if (c !== 0) {
-                if (currentP === 0) continue;
-                if (c % currentP !== 0) continue;
-                currentQ = c / currentP;
-            } else {
-                if (i !== 0) continue;
-                currentP = 0;
-                if (m !== 0 && b % m === 0) currentQ = b / m;
-                else currentQ = 0;
-            }
+            for (let i = -limit; i <= limit; i++) {
+                let currentP = i;
+                let currentQ;
 
-            if ((m * currentQ) + (n * currentP) === b) {
-                p = currentP;
-                q = currentQ;
-                found = true;
-                break;
+                if (c !== 0) {
+                    if (currentP === 0) continue;
+                    if (c % currentP !== 0) continue;
+                    currentQ = c / currentP;
+                } else {
+                    if (i !== 0) continue;
+                    currentP = 0;
+                    if (tm !== 0 && b % tm === 0) currentQ = b / tm;
+                    else currentQ = 0;
+                }
+
+                if ((tm * currentQ) + (tn * currentP) === b) {
+                    m = tm; n = tn;
+                    p = currentP; q = currentQ;
+                    found = true;
+                    break;
+                }
             }
+            if (found) break;
         }
 
         if (!found) {
@@ -771,37 +788,71 @@ class App {
             return;
         }
 
-        // Assign Targets
-        // We separate lists to control render order (z-index essentially)
-        // Usually, we want Base -> Overlaps -> Double Overlaps
-        // So: Positive x^2 -> Positive Lists -> Negative Lists -> Units (if overlap)
+        // Check for Zero Pairs Requirement
+        const vCount = m * q;
+        const vPos = vCount > 0 ? vCount : 0;
+        const vNeg = vCount < 0 ? -vCount : 0;
 
+        const hCount = p * n;
+        const hPos = hCount > 0 ? hCount : 0;
+        const hNeg = hCount < 0 ? -hCount : 0;
+
+        const requiredPos = vPos + hPos;
+        const requiredNeg = vNeg + hNeg;
+
+        let currentPos = this.tiles.filter(t => t.type === 'x' && !t.isNegative).length;
+        let currentNeg = this.tiles.filter(t => t.type === 'x' && t.isNegative).length;
+
+        const deficitPos = Math.max(0, requiredPos - currentPos);
+        const deficitNeg = Math.max(0, requiredNeg - currentNeg);
+
+        const pairsNeeded = Math.max(deficitPos, deficitNeg);
+
+        if (pairsNeeded > 0) {
+            const cx = this.canvas.width / 2;
+            const cy = 50;
+            for (let k = 0; k < deficitPos; k++) {
+                this.tiles.push(new Tile('x', cx - 60, cy, false));
+            }
+            for (let k = 0; k < deficitNeg; k++) {
+                this.tiles.push(new Tile('x', cx + 60, cy, true));
+            }
+            this.showFeedback(`Added ${deficitPos} positive and ${deficitNeg} negative x-tiles to solve!`, true);
+        }
+
+        // Re-assign Targets with new list
         let x2List = this.tiles.filter(t => t.type === 'x2');
-        let xList = this.tiles.filter(t => t.type === 'x');
         let oneList = this.tiles.filter(t => t.type === 'one');
+
+        let xListPos = this.tiles.filter(t => t.type === 'x' && !t.isNegative);
+        let xListNeg = this.tiles.filter(t => t.type === 'x' && t.isNegative);
 
         const X = TILE_CONFIG.SIZES.x;
         const U = TILE_CONFIG.SIZES.u;
 
-        // Base Dimensions
-        const gridW = m * X;
-        const gridH = n * X;
+        // Base Dimensions (Geometric size is absolute)
+        const gridW = Math.abs(m) * X;
+        const gridH = Math.abs(n) * X;
 
-        // Calculate Total Visual Dimensions to center it
-        // If p > 0, width adds p*U. If p < 0, width is gridW (overlap is internal).
-        // If q > 0, height adds q*U. If q < 0, height is gridH.
+        // Overlap Logic & Visual Dimensions
+        const isOverlapX = (m > 0) !== (p > 0) && p !== 0;
+        const isOverlapY = (n > 0) !== (q > 0) && q !== 0;
 
-        const totalW = p > 0 ? gridW + p * U : gridW;
-        const totalH = q > 0 ? gridH + q * U : gridH;
+        const pAbs = Math.abs(p);
+        const qAbs = Math.abs(q);
+        const mAbs = Math.abs(m);
+        const nAbs = Math.abs(n);
+
+        const totalW = isOverlapX ? gridW : gridW + pAbs * U;
+        const totalH = isOverlapY ? gridH : gridH + qAbs * U;
 
         const startX = (this.canvas.width - totalW) / 2;
         const startY = (this.canvas.height - totalH) / 2;
 
-        // 1. Place x^2 (Always positive base in this simplified model?)
-        // Assuming a > 0 for base geometry usually.
+        // 1. Place Base (x^2)
         let x2Idx = 0;
-        for (let row = 0; row < n; row++) {
-            for (let col = 0; col < m; col++) {
+        for (let row = 0; row < nAbs; row++) {
+            for (let col = 0; col < mAbs; col++) {
                 if (x2Idx < x2List.length) {
                     const t = x2List[x2Idx++];
                     t.targetX = startX + col * t.xSize;
@@ -810,60 +861,55 @@ class App {
             }
         }
 
-        let xIdx = 0;
+        const vStartX = isOverlapX ? (startX + gridW - pAbs * U) : (startX + gridW);
+        const vSignPos = (p * n) > 0;
 
-        // 2. Vertical X (p columns) - Associated with Width
-        // If p > 0: Place to RIGHT of gridW.
-        // If p < 0: Place to RIGHT EDGE of gridW, shifting Left (Overlap).
+        // Shared indices
+        let posIdx = 0;
+        let negIdx = 0;
 
-        const pAbs = Math.abs(p);
-        const pIsNeg = p < 0;
-
-        const vStartX = pIsNeg ? (startX + gridW - pAbs * U) : (startX + gridW);
-        // If negative, we start at gridW - totalOverlap.
-        // If we have multiple columns, we tile them.
-
+        // 2. Vertical X (p columns)
         for (let col = 0; col < pAbs; col++) {
-            for (let row = 0; row < n; row++) {
-                if (xIdx < xList.length) {
-                    const t = xList[xIdx++];
+            for (let row = 0; row < nAbs; row++) {
+                let t = null;
+                if (vSignPos) {
+                    if (posIdx < xListPos.length) t = xListPos[posIdx++];
+                } else {
+                    if (negIdx < xListNeg.length) t = xListNeg[negIdx++];
+                }
+
+                if (t) {
                     t.rotation = 1;
                     t.updateDimensions();
-                    // Each col is U wide.
                     t.targetX = vStartX + col * U;
-                    // n rows of height X
                     t.targetY = startY + row * X;
                 }
             }
         }
 
-        // 3. Horizontal X (q rows) - Associated with Height
-        // If q > 0: Place BELOW gridH.
-        // If q < 0: Place at BOTTOM EDGE of gridH, shifting Up (Overlap).
-
-        const qAbs = Math.abs(q);
-        const qIsNeg = q < 0;
-
-        const hStartY = qIsNeg ? (startY + gridH - qAbs * U) : (startY + gridH);
+        // 3. Horizontal X (q rows)
+        const hStartY = isOverlapY ? (startY + gridH - qAbs * U) : (startY + gridH);
+        const hSignPos = (q * m) > 0;
 
         for (let row = 0; row < qAbs; row++) {
-            for (let col = 0; col < m; col++) {
-                if (xIdx < xList.length) {
-                    const t = xList[xIdx++];
+            for (let col = 0; col < mAbs; col++) {
+                let t = null;
+                if (hSignPos) {
+                    if (posIdx < xListPos.length) t = xListPos[posIdx++];
+                } else {
+                    if (negIdx < xListNeg.length) t = xListNeg[negIdx++];
+                }
+
+                if (t) {
                     t.rotation = 0;
                     t.updateDimensions();
-                    // m cols of width X
                     t.targetX = startX + col * X;
-                    // Each row is U high
                     t.targetY = hStartY + row * U;
                 }
             }
         }
 
-        // 4. Units (Intersection of p and q blocks)
-        // X Pos: Aligned with Vertical block.
-        // Y Pos: Aligned with Horizontal block.
-
+        // 4. Units (Intersection)
         let oneIdx = 0;
         const uStartX = vStartX;
         const uStartY = hStartY;
@@ -878,13 +924,12 @@ class App {
             }
         }
 
-        // Sort for render order
         // Sort for render order (Back to Front)
         this.tiles.sort((a, b) => {
             const getRank = (t) => {
-                if (t.type === 'x2') return 1; // Base (Back)
-                if (t.type === 'x') return 2;  // Middle
-                if (t.type === 'one') return 3; // Top (Front)
+                if (t.type === 'x2') return 1; // Base
+                if (t.type === 'x') return 2;  // Linear terms
+                if (t.type === 'one') return 3; // Constant terms
                 return 0;
             };
             return getRank(a) - getRank(b);
@@ -909,4 +954,3 @@ class App {
 window.addEventListener('DOMContentLoaded', () => {
     new App();
 });
-
