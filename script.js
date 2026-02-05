@@ -1,3 +1,5 @@
+import { solveQuadratic, findValidOverlap } from './solver.js';
+
 /**
  * Constants and Configuration
  */
@@ -576,62 +578,25 @@ class App {
                 const X_SIZE = TILE_CONFIG.SIZES.x;
                 const U_SIZE = TILE_CONFIG.SIZES.u;
 
-                // Let's deduce base dimensions in terms of x and 1
-                const getGridDimensions = (pixels) => {
-                    let bestErr = Infinity;
-                    let bestA = 0, bestB = 0;
-                    for (let a = 1; a <= 5; a++) {
-                        for (let b = 0; b <= 15; b++) {
-                            const est = a * X_SIZE + b * U_SIZE;
-                            const err = Math.abs(est - pixels);
-                            if (err < bestErr) { bestErr = err; bestA = a; bestB = b; }
-                        }
-                    }
-                    if (bestErr < 30) return [bestA, bestB];
-                    return [0, 0];
-                };
+                const overlap = findValidOverlap(bboxWidth, bboxHeight, valA, valB, valC, X_SIZE, U_SIZE);
 
-                const [baseX_A, base1_A] = getGridDimensions(bboxWidth);
-                const [baseX_B, base1_B] = getGridDimensions(bboxHeight);
+                if (overlap) {
+                    const [p, q] = overlap;
 
-                // Now, measure negative cuts.
-                // We assume clean cuts: Final Factors = (baseW - p)(baseH - q)
-                // We check small integer p, q.
+                    // Verify Area match (Expected vs Actual Negative Area)
+                    // Expected Removed Area = Area(Before cuts) - Area(After cuts)
+                    // But doing simple p*Area + q*Area - overlap is easier.
 
-                for (let p = 0; p <= 12; p++) {
-                    for (let q = 0; q <= 12; q++) {
-                        if (p === 0 && q === 0) continue;
+                    const expectedNegArea = (p * U_SIZE * bboxHeight) + (q * U_SIZE * bboxWidth) - (p * q * U_SIZE * U_SIZE);
 
-                        // Proposed Factors
-                        const f1_x = baseX_A;
-                        const f1_c = base1_A - p;
+                    // Measure actual negative tile area
+                    let actualNegArea = 0;
+                    negativeTiles.forEach(t => actualNegArea += t.w * t.h);
 
-                        const f2_x = baseX_B;
-                        const f2_c = base1_B - q;
-
-                        // Expand: (f1_x X + f1_c)(f2_x X + f2_c)
-                        const resA = f1_x * f2_x;
-                        const resB = (f1_x * f2_c) + (f1_c * f2_x);
-                        const resC = f1_c * f2_c;
-
-                        if (resA === valA && resB === valB && resC === valC) {
-                            // Mathematical match found! 
-                            // Verify Area match (Expected vs Actual Negative Area)
-                            // Expected Removed Area = Area(Before cuts) - Area(After cuts)
-                            // But doing simple p*Area + q*Area - overlap is easier.
-
-                            const expectedNegArea = (p * U_SIZE * bboxHeight) + (q * U_SIZE * bboxWidth) - (p * q * U_SIZE * U_SIZE);
-
-                            // Measure actual negative tile area
-                            let actualNegArea = 0;
-                            negativeTiles.forEach(t => actualNegArea += t.w * t.h);
-
-                            // Allow some slop
-                            if (Math.abs(expectedNegArea - actualNegArea) < 200) {
-                                if (!silent) this.showFeedback("Valid Overlap Arrangement! Result area matches the equation.", true);
-                                return;
-                            }
-                        }
+                    // Allow some slop
+                    if (Math.abs(expectedNegArea - actualNegArea) < 200) {
+                        if (!silent) this.showFeedback("Valid Overlap Arrangement! Result area matches the equation.", true);
+                        return;
                     }
                 }
             }
@@ -737,56 +702,14 @@ class App {
 
         this.generateTiles(a, b, c);
 
-        const [m_abs, n_abs] = this.getClosestFactors(a);
+        const solution = solveQuadratic(a, b, c);
 
-        // Try sign configurations for m, n
-        const configs = [];
-        if (a >= 0) {
-            configs.push({ m: m_abs, n: n_abs });
-        } else {
-            configs.push({ m: -m_abs, n: n_abs }); // One neg
-            configs.push({ m: m_abs, n: -n_abs });
-        }
-
-        let m = 0, n = 0, p = 0, q = 0;
-        let found = false;
-
-        const limit = Math.abs(c) === 0 ? Math.abs(b) : Math.abs(c);
-
-        // Grid search for valid factors
-        for (const config of configs) {
-            const tm = config.m;
-            const tn = config.n;
-
-            for (let i = -limit; i <= limit; i++) {
-                let currentP = i;
-                let currentQ;
-
-                if (c !== 0) {
-                    if (currentP === 0) continue;
-                    if (c % currentP !== 0) continue;
-                    currentQ = c / currentP;
-                } else {
-                    if (i !== 0) continue;
-                    currentP = 0;
-                    if (tm !== 0 && b % tm === 0) currentQ = b / tm;
-                    else currentQ = 0;
-                }
-
-                if ((tm * currentQ) + (tn * currentP) === b) {
-                    m = tm; n = tn;
-                    p = currentP; q = currentQ;
-                    found = true;
-                    break;
-                }
-            }
-            if (found) break;
-        }
-
-        if (!found) {
+        if (!solution.found) {
             this.showFeedback("This equation doesn't favor nice integer rectangles!", false);
             return;
         }
+
+        const { m, n, p, q } = solution;
 
         // Check for Zero Pairs Requirement
         const vCount = m * q;
@@ -939,15 +862,7 @@ class App {
         this.requestRender();
     }
 
-    getClosestFactors(num) {
-        num = Math.abs(num);
-        let m = Math.floor(Math.sqrt(num));
-        while (m > 0) {
-            if (num % m === 0) return [m, num / m];
-            m--;
-        }
-        return [1, num];
-    }
+
 }
 
 // Start App
