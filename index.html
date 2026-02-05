@@ -32,27 +32,21 @@
                             <input type="number" id="coeff-a" value="1" min="1" max="5">
                             <span>$a$</span>
                         </div>
-                        <span class="operator">+</span>
                         <div class="input-wrapper">
                             <input type="number" id="coeff-b" value="5" min="-10" max="10">
                             <span>$b$</span>
                         </div>
-                        <span class="operator">+</span>
                         <div class="input-wrapper">
                             <input type="number" id="coeff-c" value="6" min="-10" max="10">
                             <span>$c$</span>
                         </div>
                     </div>
                 </div>
-
                 <div class="actions">
-                    <button id="btn-confirm-equation" class="btn primary"
-                        style="width: 100%; margin-top: 10px;">OK</button>
-                    <div id="equation-display"
-                        style="margin-top: 15px; text-align: center; font-family: 'Outfit', monospace; font-size: 1.2rem; color: var(--tile-x2); min-height: 24px;">
-                    </div>
+                    <button id="btn-solve" class="btn primary">Solve</button>
+                    <button id="btn-check" class="btn success">Check</button>
+                    <button id="btn-reset" class="btn secondary">Clear</button>
                 </div>
-
             </div>
 
             <!-- Tile Bank Logic -->
@@ -92,19 +86,14 @@
                     Drag here to Delete
                 </div>
             </div>
+            <div class="overlay-ui">
+                <div class="readout" id="area-readout">Area: 0</div>
+            </div>
         </aside>
 
         <!-- Main Workspace -->
         <main class="workspace">
-            <div class="toolbar">
-                <button id="btn-solve" class="btn primary">Solve (Animate)</button>
-                <button id="btn-check" class="btn success">Check Solution</button>
-                <button id="btn-reset" class="btn secondary">Clear All</button>
-            </div>
             <canvas id="app-canvas"></canvas>
-            <div class="overlay-ui">
-                <div class="readout" id="area-readout">Area: 0</div>
-            </div>
         </main>
 
         <div id="feedback" class="feedback-area hidden">

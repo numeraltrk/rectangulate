@@ -1,70 +1,41 @@
-/**
- * Solver Logic for Rectangulate
- * Handles the mathematical operations for factoring and validating arrangements.
- */
 
-export const getClosestFactors = (num) => {
-    num = Math.abs(num);
-    let m = Math.floor(Math.sqrt(num));
-    while (m > 0) {
-        if (num % m === 0) return [m, num / m];
-        m--;
-    }
-    return [1, num];
+const gcd = (a, b) => {
+    return b === 0 ? a : gcd(b, a % b);
 };
 
-/**
- * Attempts to find integer factors (mx + p)(nx + q) that match the equation ax^2 + bx + c
- * returns { found: boolean, m, n, p, q }
- */
+const getSimplestFraction = (num, den) => {
+    const common = Math.abs(gcd(num, den));
+    let n = num / common;
+    let d = den / common;
+    if (d < 0) {
+        n = -n;
+        d = -d;
+    }
+    return [n, d];
+};
+
+
 export const solveQuadratic = (a, b, c) => {
-    const [m_abs, n_abs] = getClosestFactors(a);
+    const D = b * b - 4 * a * c;
 
-    // Try sign configurations for m, n
-    const configs = [];
-    if (a >= 0) {
-        configs.push({ m: m_abs, n: n_abs });
-    } else {
-        configs.push({ m: -m_abs, n: n_abs }); // One neg
-        configs.push({ m: m_abs, n: -n_abs });
+    if (D < 0) {
+        return { found: false, m: 0, n: 0, p: 0, q: 0 };
     }
 
-    let m = 0, n = 0, p = 0, q = 0;
-    let found = false;
-
-    const limit = Math.abs(c) === 0 ? Math.abs(b) : Math.abs(c);
-
-    // Grid search for valid factors
-    for (const config of configs) {
-        const tm = config.m;
-        const tn = config.n;
-
-        for (let i = -limit; i <= limit; i++) {
-            let currentP = i;
-            let currentQ;
-
-            if (c !== 0) {
-                if (currentP === 0) continue;
-                if (c % currentP !== 0) continue;
-                currentQ = c / currentP;
-            } else {
-                if (i !== 0) continue;
-                currentP = 0;
-                if (tm !== 0 && b % tm === 0) currentQ = b / tm;
-                else currentQ = 0;
-            }
-
-            if ((tm * currentQ) + (tn * currentP) === b) {
-                m = tm; n = tn;
-                p = currentP; q = currentQ;
-                found = true;
-                break;
-            }
-        }
-        if (found) break;
+    const sqrtD = Math.round(Math.sqrt(D));
+    if (sqrtD * sqrtD !== D) {
+        return { found: false, m: 0, n: 0, p: 0, q: 0 };
     }
 
-    return { found, m, n, p, q };
+    const [n1, d1] = getSimplestFraction(-b + sqrtD, 2 * a);
+    const [n2, d2] = getSimplestFraction(-b - sqrtD, 2 * a);
+
+    let m = d1;
+    let p = -n1;
+    let n = d2;
+    let q = -n2;
+
+    return { found: true, m, n, p, q };
 };
 
 /**

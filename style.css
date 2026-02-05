@@ -14,11 +14,11 @@
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
 
-    --tile-x2: #facc15;
+    --tile-x2: #4ade80;
     /* Yellow-400 */
     --tile-x: #4ade80;
     /* Green-400 */
-    --tile-1: #60a5fa;
+    --tile-1: #4ade80;
     /* Blue-400 */
     --tile-neg: #ef4444;
     /* Red-500 for negatives */
@@ -106,7 +106,7 @@ body {
 }
 
 .input-wrapper input {
-    width: 50px;
+    width: 65px;
     background: var(--bg-grade-2);
     border: 1px solid var(--glass-border);
     border-radius: 8px;

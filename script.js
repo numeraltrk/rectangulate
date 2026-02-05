@@ -13,9 +13,9 @@ let TILE_CONFIG = {
         u: 25   // unit tile side (and x tile width)
     },
     COLORS: {
-        x2: '#facc15',
+        x2: '#4ade80',
         x: '#4ade80',
-        one: '#60a5fa',
+        one: '#4ade80',
         neg: '#ef4444',
         stroke: 'rgba(255,255,255,0.4)'
     }
@@ -168,11 +168,10 @@ class App {
 
     setupInputListeners() {
 
-        document.getElementById('btn-confirm-equation').addEventListener('click', () => {
-            this.updateEquationDisplay();
-        });
-
         document.getElementById('btn-solve').addEventListener('click', () => {
+            this.tiles = [];
+            this.requestRender();
+            this.hideFeedback();
             this.solveAndAnimate();
         });
 
@@ -696,9 +695,9 @@ class App {
     }
 
     solveAndAnimate() {
-        const a = parseInt(document.getElementById('coeff-a').value) || 1;
-        const b = parseInt(document.getElementById('coeff-b').value) || 5;
-        const c = parseInt(document.getElementById('coeff-c').value) || 6;
+        const a = parseInt(document.getElementById('coeff-a').value) || 0;
+        const b = parseInt(document.getElementById('coeff-b').value) || 0;
+        const c = parseInt(document.getElementById('coeff-c').value) || 0;
 
         this.generateTiles(a, b, c);
 
@@ -740,7 +739,6 @@ class App {
             for (let k = 0; k < deficitNeg; k++) {
                 this.tiles.push(new Tile('x', cx + 60, cy, true));
             }
-            this.showFeedback(`Added ${deficitPos} positive and ${deficitNeg} negative x-tiles to solve!`, true);
         }
 
         // Re-assign Targets with new list
