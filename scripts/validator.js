@@ -92,26 +92,6 @@ export const validateArrangement = (app, silent = false) => {
 
 export const checkSolution = (app) => {
     // Just updates readout now
-    const readout = document.getElementById('area-readout');
+    // Logic for updating readout removed
 
-    // Calculate total area
-    let totalArea = 0;
-    let x2Count = 0;
-    let xCount = 0;
-    let oneCount = 0;
-
-    for (const t of app.tiles) {
-        if (t.type === 'x2') x2Count += (t.isNegative ? -1 : 1);
-        if (t.type === 'x') xCount += (t.isNegative ? -1 : 1);
-        if (t.type === 'one') oneCount += (t.isNegative ? -1 : 1);
-    }
-
-    // We can just display the counts for now
-    // Format: ax^2 + bx + c
-    readout.innerHTML = `Area: $${x2Count}x^2 + ${xCount}x + ${oneCount}$`;
-
-    // Re-render MathJax if needed
-    if (window.MathJax) {
-        MathJax.typesetPromise([readout]);
-    }
 };

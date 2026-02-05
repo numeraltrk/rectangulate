@@ -122,56 +122,66 @@ export class App {
     }
 
     setupCanvasListeners() {
-        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        window.addEventListener('mousemove', this.handleMouseMove.bind(this)); // Window for drag out
-        window.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        this.canvas.addEventListener('pointerdown', this.handlePointerDown.bind(this));
+        window.addEventListener('pointermove', this.handlePointerMove.bind(this));
+        window.addEventListener('pointerup', this.handlePointerUp.bind(this));
         this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-
-        // Touch Listeners
-        this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-        window.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-        window.addEventListener('touchend', this.handleTouchEnd.bind(this));
     }
 
-    handleTouchStart(e) {
-        if (e.touches.length > 1) return; // Ignore multi-touch
-        e.preventDefault();
-        const touch = e.touches[0];
-        const mouseEvent = new MouseEvent('mousedown', {
-            clientX: touch.clientX,
-            clientY: touch.clientY
-        });
+    handlePointerDown(e) {
+        if (!e.isPrimary) return;
+        this.canvas.setPointerCapture(e.pointerId);
 
-        // Double Tap Detection
-        const now = Date.now();
-        if (this.lastTap && (now - this.lastTap) < 300) {
-            this.handleDoubleClick(mouseEvent);
-            this.lastTap = null;
-        } else {
-            this.lastTap = now;
-            this.handleMouseDown(mouseEvent);
+        const { x, y } = this.getMousePos(e);
+        // Check processing in reverse order (top first)
+        for (let i = this.tiles.length - 1; i >= 0; i--) {
+            if (this.tiles[i].contains(x, y)) {
+                this.dragTarget = this.tiles[i];
+                // Move to top of stack
+                this.tiles.splice(i, 1);
+                this.tiles.push(this.dragTarget);
+
+                this.dragTarget.isDragging = true;
+                this.dragOffset = {
+                    x: x - this.dragTarget.x,
+                    y: y - this.dragTarget.y
+                };
+                this.requestRender();
+                return;
+            }
         }
     }
 
-    handleTouchMove(e) {
-        if (e.touches.length > 1) return;
+    handlePointerMove(e) {
+        if (!this.dragTarget) return;
+        if (e.pointerId !== undefined && !this.canvas.hasPointerCapture(e.pointerId) && e.pointerType !== 'mouse') {
+            // Ensure capture if not mouse (sometimes lost on weird interactions)
+            // But usually capture is enough
+        }
 
-        // Only prevent default if we are actively dragging a tile
+        const { x, y } = this.getMousePos(e);
+        // Boundary Constraints
+        const canvasW = this.canvas.width;
+        const canvasH = this.canvas.height;
+        const tW = this.dragTarget.w;
+        const tH = this.dragTarget.h;
+
+        this.dragTarget.x = Math.max(0, Math.min(canvasW - tW, x - this.dragOffset.x));
+        this.dragTarget.y = Math.max(0, Math.min(canvasH - tH, y - this.dragOffset.y));
+
+        this.requestRender();
+    }
+
+    handlePointerUp(e) {
         if (this.dragTarget) {
-            e.preventDefault();
+            this.snapToNeighbors(this.dragTarget);
+            this.dragTarget.isDragging = false;
+            this.dragTarget = null;
+            this.requestRender();
+            // Call imported function
+            checkSolution(this);
+            if (e.pointerId) this.canvas.releasePointerCapture(e.pointerId);
         }
-
-        const touch = e.touches[0];
-        const mouseEvent = new MouseEvent('mousemove', {
-            clientX: touch.clientX,
-            clientY: touch.clientY
-        });
-        this.handleMouseMove(mouseEvent);
-    }
-
-    handleTouchEnd(e) {
-        const mouseEvent = new MouseEvent('mouseup', {});
-        this.handleMouseUp(mouseEvent);
     }
 
     addTile(type, isNegative) {
@@ -206,52 +216,7 @@ export class App {
         }
     }
 
-    handleMouseDown(e) {
-        const { x, y } = this.getMousePos(e);
-        // Check processing in reverse order (top first)
-        for (let i = this.tiles.length - 1; i >= 0; i--) {
-            if (this.tiles[i].contains(x, y)) {
-                this.dragTarget = this.tiles[i];
-                // Move to top of stack
-                this.tiles.splice(i, 1);
-                this.tiles.push(this.dragTarget);
 
-                this.dragTarget.isDragging = true;
-                this.dragOffset = {
-                    x: x - this.dragTarget.x,
-                    y: y - this.dragTarget.y
-                };
-                this.requestRender();
-                return;
-            }
-        }
-    }
-
-    handleMouseMove(e) {
-        if (!this.dragTarget) return;
-        const { x, y } = this.getMousePos(e);
-        // Boundary Constraints
-        const canvasW = this.canvas.width;
-        const canvasH = this.canvas.height;
-        const tW = this.dragTarget.w;
-        const tH = this.dragTarget.h;
-
-        this.dragTarget.x = Math.max(0, Math.min(canvasW - tW, x - this.dragOffset.x));
-        this.dragTarget.y = Math.max(0, Math.min(canvasH - tH, y - this.dragOffset.y));
-
-        this.requestRender();
-    }
-
-    handleMouseUp(e) {
-        if (this.dragTarget) {
-            this.snapToNeighbors(this.dragTarget);
-            this.dragTarget.isDragging = false;
-            this.dragTarget = null;
-            this.requestRender();
-            // Call imported function
-            checkSolution(this);
-        }
-    }
 
     getCoefficients() {
         const limit = TILE_CONFIG.LIMITS;
