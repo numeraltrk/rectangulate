@@ -267,9 +267,11 @@ canvas {
 
 .overlay-ui {
     position: absolute;
-    top: 2rem;
-    right: 2rem;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     pointer-events: none;
+    z-index: 100;
 }
 
 .readout {
@@ -307,10 +309,7 @@ canvas {
 }
 
 /* Adjust overlay UI to not overlap toolbar */
-.overlay-ui {
-    top: auto;
-    bottom: 2rem;
-}
+
 
 /* Feedback Popup */
 .feedback-area {
@@ -438,4 +437,82 @@ canvas {
     .hint {
         display: none;
     }
+}
+
+/* Tile Bank Controls */
+.tile-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.tile-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.tile-icon {
+    width: 24px;
+    height: 24px;
+    /* Default square */
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.tile-icon.rect {
+    width: 12px;
+    height: 24px;
+}
+
+/* x tile */
+.tile-icon.small {
+    width: 12px;
+    height: 12px;
+}
+
+/* 1 tile */
+
+.tile-controls {
+    display: flex;
+    gap: 5px;
+}
+
+.ctrl-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.2s;
+}
+
+.ctrl-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.ctrl-btn:active {
+    transform: scale(0.95);
+}
+
+.ctrl-btn.add {
+    color: var(--success);
+}
+
+.ctrl-btn.remove {
+    color: var(--error);
 }

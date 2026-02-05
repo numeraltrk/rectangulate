@@ -26,7 +26,10 @@
 
             <div class="control-panel glass-panel">
                 <div class="input-group">
-                    <label for="equation-a">Quadratic Equation<br>($ax^2 + bx + c$)</label>
+                    <label for="equation-a">Quadratic Equation</label>
+                    <div id="equation-display" class="equation-preview"
+                        style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; color: var(--text-color); margin-bottom: 10px; min-height: 24px;">
+                        $ax^2 + bx + c$</div>
                     <div class="equation-inputs">
                         <div class="input-wrapper">
                             <input type="number" id="coeff-a" value="1" min="1" max="5">
@@ -51,49 +54,81 @@
 
             <!-- Tile Bank Logic -->
             <div class="legend glass-panel">
-
                 <h3>Tile Bank</h3>
 
-                <div class="control-group">
-                    <label
-                        style="display: flex; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 1rem;">
-                        <input type="checkbox" id="chk-negative" style="width: auto; margin-right: 10px;">
-                        <span>Negative</span>
-                    </label>
-
+                <!-- x^2 (Positive) -->
+                <div class="tile-row">
+                    <div class="tile-label">
+                        <div class="tile-icon" style="background: var(--tile-x2);"></div>
+                        x²
+                    </div>
+                    <div class="tile-controls">
+                        <button class="ctrl-btn remove" data-type="x2" data-neg="false">-</button>
+                        <button class="ctrl-btn add" data-type="x2" data-neg="false">+</button>
+                    </div>
                 </div>
 
-                <div class="palette" id="tile-palette"
-                    style="display: flex; flex-direction: row; gap: 15px; margin-top: 15px; align-items: flex-end; padding-bottom: 10px;">
-                    <div class="palette-item" data-type="x2"
-                        style="width: 50px; height: 50px; background: var(--tile-x2); border: 2px solid rgba(255,255,255,0.4); cursor: grab; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 4px; color: black;">
-                        x²</div>
-                    <div class="palette-item" data-type="x"
-                        style="width: 20px; height: 50px; background: var(--tile-x); border: 2px solid rgba(255,255,255,0.4); cursor: grab; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 4px; color: black;">
-                        x</div>
-                    <div class="palette-item" data-type="one"
-                        style="width: 20px; height: 20px; background: var(--tile-1); border: 2px solid rgba(255,255,255,0.4); cursor: grab; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 2px; color: black;">
-                        1</div>
+                <!-- x (Positive) -->
+                <div class="tile-row">
+                    <div class="tile-label">
+                        <div class="tile-icon rect" style="background: var(--tile-x);"></div>
+                        x
+                    </div>
+                    <div class="tile-controls">
+                        <button class="ctrl-btn remove" data-type="x" data-neg="false">-</button>
+                        <button class="ctrl-btn add" data-type="x" data-neg="false">+</button>
+                    </div>
                 </div>
-                <div style="margin-top: 20px;">
-                    <label
-                        style="display: flex; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 0.9rem;">
-                        <span>Double Click to Rotate</span>
-                    </label>
+
+                <!-- -x (Negative) -->
+                <div class="tile-row">
+                    <div class="tile-label">
+                        <div class="tile-icon rect" style="background: var(--tile-neg);"></div>
+                        -x
+                    </div>
+                    <div class="tile-controls">
+                        <button class="ctrl-btn remove" data-type="x" data-neg="true">-</button>
+                        <button class="ctrl-btn add" data-type="x" data-neg="true">+</button>
+                    </div>
                 </div>
-                <div class="trash-zone" id="trash-zone"
-                    style="margin-top: 20px; padding: 15px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 8px; text-align: center; color: rgba(255,255,255,0.5);">
-                    Drag here to Delete
+
+                <!-- 1 (Positive) -->
+                <div class="tile-row">
+                    <div class="tile-label">
+                        <div class="tile-icon small" style="background: var(--tile-1);"></div>
+                        1
+                    </div>
+                    <div class="tile-controls">
+                        <button class="ctrl-btn remove" data-type="one" data-neg="false">-</button>
+                        <button class="ctrl-btn add" data-type="one" data-neg="false">+</button>
+                    </div>
+                </div>
+
+                <!-- -1 (Negative) -->
+                <div class="tile-row">
+                    <div class="tile-label">
+                        <div class="tile-icon small" style="background: var(--tile-neg);"></div>
+                        -1
+                    </div>
+                    <div class="tile-controls">
+                        <button class="ctrl-btn remove" data-type="one" data-neg="true">-</button>
+                        <button class="ctrl-btn add" data-type="one" data-neg="true">+</button>
+                    </div>
+                </div>
+
+                <div class="hint" style="margin-top: 20px; text-align: center;">
+                    Double Click to Rotate
                 </div>
             </div>
-            <div class="overlay-ui">
-                <div class="readout" id="area-readout">Area: 0</div>
-            </div>
+
         </aside>
 
         <!-- Main Workspace -->
         <main class="workspace">
             <canvas id="app-canvas"></canvas>
+            <div class="overlay-ui">
+                <div class="readout" id="area-readout">Current Area: 0</div>
+            </div>
         </main>
 
         <div id="feedback" class="feedback-area hidden">
@@ -113,7 +148,7 @@
         };
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script type="module" src="script.js"></script>
+    <script type="module" src="scripts/main.js"></script>
 </body>
 
 </html>
