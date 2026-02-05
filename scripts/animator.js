@@ -3,11 +3,7 @@ import { Tile } from './Tile.js';
 import { TILE_CONFIG } from './constants.js';
 
 /**
- * Generates tiles based on coefficients a, b, c
- * @param {Object} app - The main App instance
- * @param {number} a 
- * @param {number} b 
- * @param {number} c 
+ * Generates initial tiles based on coefficients a, b, c
  */
 export const generateTiles = (app, a, b, c) => {
     app.tiles = [];
@@ -18,7 +14,7 @@ export const generateTiles = (app, a, b, c) => {
     // Add x^2 tiles
     for (let i = 0; i < Math.abs(a); i++) {
         app.tiles.push(new Tile('x2', startX, startY, a < 0));
-        startX += TILE_CONFIG.SIZES.x + gap; // Simple layout spacing
+        startX += TILE_CONFIG.SIZES.x + gap;
     }
 
     // Add x tiles
@@ -45,16 +41,10 @@ export const generateTiles = (app, a, b, c) => {
 };
 
 /**
- * Solves the quadratic equation and sets up animation targets
- * @param {Object} app - The main App instance
+ * Main Solver Entry Point
  */
 export const solveAndAnimate = (app) => {
-    const limit = TILE_CONFIG.LIMITS;
-    const clamp = (val) => Math.max(limit.MIN_COEFF, Math.min(limit.MAX_COEFF, val));
-
-    const a = clamp(parseInt(document.getElementById('coeff-a').value) || 0);
-    const b = clamp(parseInt(document.getElementById('coeff-b').value) || 0);
-    const c = clamp(parseInt(document.getElementById('coeff-c').value) || 0);
+    const { a, b, c } = app.getCoefficients();
 
     generateTiles(app, a, b, c);
 
@@ -65,28 +55,76 @@ export const solveAndAnimate = (app) => {
         return;
     }
 
+    // Add Zero Pairs if needed
+    handleZeroPairs(app, solution);
+
+    // Sort tiles for correct Z-index (smaller on top)
+    const typeScore = { 'x2': 1, 'x': 2, 'one': 3 };
+    app.tiles.sort((t1, t2) => typeScore[t1.type] - typeScore[t2.type]);
+
+    // Dispatch to specific case handler
+    // Case 1: b >= 0, c >= 0
+    if (b >= 0 && c >= 0) {
+        animateCasePP(app, solution);
+    }
+    // Case 2: b >= 0, c < 0
+    else if (b >= 0 && c < 0) {
+        animateCasePN(app, solution);
+    }
+    // Case 3: b < 0, c >= 0
+    else if (b < 0 && c >= 0) {
+        animateCaseNP(app, solution);
+    }
+    // Case 4: b < 0, c < 0
+    else {
+        animateCaseNN(app, solution);
+    }
+
+    app.isAnimating = true;
+    app.requestRender();
+};
+
+/**
+ * Adds necessary zero pairs to the board before animation
+ */
+const handleZeroPairs = (app, solution) => {
     const { m, n, p, q } = solution;
 
-    // Check for Zero Pairs Requirement
-    const vCount = m * q;
-    const vPos = vCount > 0 ? vCount : 0;
-    const vNeg = vCount < 0 ? -vCount : 0;
+    // Calculate required positive and negative AREAS (not just linear counts)
+    // The previous logic estimated x-tiles needed based on factors.
+    // Vertical X area: p * n (rows of x) ?? No, p columns of height nX.
+    // Wait, m and n are scaling factors for X dimensions. p and q are unit add-ons.
+    // Width = mX + p
+    // Height = nX + q
+    // Total X area term = (m*q + n*p)x
 
-    const hCount = p * n;
-    const hPos = hCount > 0 ? hCount : 0;
-    const hNeg = hCount < 0 ? -hCount : 0;
+    // We check how many 'x' tiles we HAVE vs how many we NEED.
 
-    const requiredPos = vPos + hPos;
-    const requiredNeg = vNeg + hNeg;
-
+    // Current counts
     let currentPos = app.tiles.filter(t => t.type === 'x' && !t.isNegative).length;
     let currentNeg = app.tiles.filter(t => t.type === 'x' && t.isNegative).length;
 
-    const deficitPos = Math.max(0, requiredPos - currentPos);
-    const deficitNeg = Math.max(0, requiredNeg - currentNeg);
+    // Required counts from factors
+    // We split the x coeff (b) into two parts: m*q and n*p
+    const term1 = m * q;
+    const term2 = n * p;
+
+    // Sum positive requirements and negative requirements
+    let reqPos = 0;
+    let reqNeg = 0;
+
+    if (term1 > 0) reqPos += term1; else reqNeg += Math.abs(term1);
+    if (term2 > 0) reqPos += term2; else reqNeg += Math.abs(term2);
+
+    const deficitPos = Math.max(0, reqPos - currentPos);
+    const deficitNeg = Math.max(0, reqNeg - currentNeg);
+
+    // Add zero pairs (pairs of 1 pos and 1 neg)
+    // Actually, simply adding the deficit is enough if we assume we started with 'b' tiles.
+    // If b = 5, and we need 6 pos and 1 neg (total net 5), we possess 5 pos, 0 neg.
+    // deficitPos = 1, deficitNeg = 1. So we add 1 of each. Correct.
 
     const pairsNeeded = Math.max(deficitPos, deficitNeg);
-
     if (pairsNeeded > 0) {
         const cx = app.canvas.width / 2;
         const cy = 50;
@@ -97,114 +135,231 @@ export const solveAndAnimate = (app) => {
             app.tiles.push(new Tile('x', cx + 60, cy, true));
         }
     }
+}
 
-    // Sort tiles by Z-index (x2 on bottom, x middle, one on top)
-    const typeScore = { 'x2': 1, 'x': 2, 'one': 3 };
-    app.tiles.sort((a, b) => typeScore[a.type] - typeScore[b.type]);
+// ==========================================
+// CASE HANDLERS
+// ==========================================
 
-    // Re-assign Targets with new list
-    let x2List = app.tiles.filter(t => t.type === 'x2');
-    let oneList = app.tiles.filter(t => t.type === 'one');
-
-    let xListPos = app.tiles.filter(t => t.type === 'x' && !t.isNegative);
-    let xListNeg = app.tiles.filter(t => t.type === 'x' && t.isNegative);
-
+// Case 1: All Positive (x^2 + bx + c)
+const animateCasePP = (app, solution) => {
+    const { m, n, p, q } = solution;
     const X = TILE_CONFIG.SIZES.x;
     const U = TILE_CONFIG.SIZES.u;
 
-    // Base Dimensions (Geometric size is absolute)
-    const gridW = Math.abs(m) * X;
-    const gridH = Math.abs(n) * X;
+    // Layout: Standard Grid
+    // Width: m*X + p*U
+    // Height: n*X + q*U
 
-    // Overlap Logic & Visual Dimensions
-    const isOverlapX = (m > 0) !== (p > 0) && p !== 0;
-    const isOverlapY = (n > 0) !== (q > 0) && q !== 0;
+    const gridW = m * X + p * U;
+    const gridH = n * X + q * U;
+    const startX = (app.canvas.width - gridW) / 2;
+    const startY = (app.canvas.height - gridH) / 2;
 
-    const pAbs = Math.abs(p);
-    const qAbs = Math.abs(q);
-    const mAbs = Math.abs(m);
-    const nAbs = Math.abs(n);
+    distributeTiles(app, startX, startY, m, n, p, q, false, false);
+};
 
-    const totalW = isOverlapX ? gridW : gridW + pAbs * U;
-    const totalH = isOverlapY ? gridH : gridH + qAbs * U;
+// Case 2: Positive b, Negative c (x^2 + bx - c)
+// One factor has +p, one has -q (or vice versa)
+const animateCasePN = (app, solution) => {
+    const { m, n, p, q } = solution;
+    const X = TILE_CONFIG.SIZES.x;
+    const U = TILE_CONFIG.SIZES.u;
 
-    const startX = (app.canvas.width - totalW) / 2;
-    const startY = (app.canvas.height - totalH) / 2;
+    // Identify overlap direction based on sign of p and q
+    // Width: mX + p, Height: nX + q
+    // Since c < 0, either p or q is negative (not both, not neither)
 
-    // 1. Place Base (x^2)
+    const w = m * X + Math.abs(p) * U;
+    const h = n * X + Math.abs(q) * U;
+
+    // If p is negative, visual width is compressed? No, "overlap" visual logic.
+    // Logic: Drawn Width is the positive hull.
+    // If factor is (x+6)(x-1), we build (x+6) by x, then overlap 1 from bottom.
+
+    // Dimensions without overlap subtraction (Full Hull)
+    // Actually, solveQuadratic returns signed p, q.
+    // Example: (x+6)(x-1) -> p=6, q=-1.
+
+    // We visualize the "Positive" bounding box, then place negatives on top/edge.
+    const isOverlapX = p < 0;
+    const isOverlapY = q < 0; // In this case, one is true.
+
+    let gridW = m * X;
+    if (p > 0) gridW += p * U; // Add positive extension
+    // If p < 0, we don't add width, we will overlap later.
+
+    let gridH = n * X;
+    if (q > 0) gridH += q * U;
+
+    const startX = (app.canvas.width - gridW) / 2;
+    const startY = (app.canvas.height - gridH) / 2;
+
+    distributeTiles(app, startX, startY, m, n, p, q, isOverlapX, isOverlapY);
+};
+
+// Case 3: Negative b, Positive c (x^2 - bx + c)
+// Both p and q are negative. (x-2)(x-3)
+const animateCaseNP = (app, solution) => {
+    const { m, n, p, q } = solution;
+    const X = TILE_CONFIG.SIZES.x;
+    // Both factors subtract.
+    // Visual: x^2 base, then overlap from Right and Bottom.
+
+    // Base grid is just mX by nX (the x^2 part).
+    // The -bx parts are formed by overlapping vertical/horizontal -x strips? 
+    // No, standard algebra tile representation for (x-2)(x-3):
+    // You lay out x^2.
+    // You place 2 negative x bars to the right? OR you cover the right edge with negative x bars.
+    // You place 3 negative x bars on the bottom.
+    // The corner is filled with positive 1s (negative * negative).
+
+    // Our logic handles overlap if p, q < 0.
+    const startX = (app.canvas.width - m * X) / 2;
+    const startY = (app.canvas.height - n * X) / 2;
+
+    distributeTiles(app, startX, startY, m, n, p, q, true, true);
+};
+
+// Case 4: Negative b, Negative c (x^2 - bx - c)
+// One is positive, one is negative, but dominant term is negative?
+// E.g. (x-5)(x+1) = x^2 - 4x - 5. p=-5, q=1.
+const animateCaseNN = (app, solution) => {
+    const { m, n, p, q } = solution;
+    const X = TILE_CONFIG.SIZES.x;
+    const U = TILE_CONFIG.SIZES.u;
+
+    const isOverlapX = p < 0;
+    const isOverlapY = q < 0;
+
+    let gridW = m * X;
+    if (!isOverlapX) gridW += p * U;
+
+    let gridH = n * X;
+    if (!isOverlapY) gridH += q * U;
+
+    const startX = (app.canvas.width - gridW) / 2;
+    const startY = (app.canvas.height - gridH) / 2;
+
+    distributeTiles(app, startX, startY, m, n, p, q, isOverlapX, isOverlapY);
+};
+
+/**
+ * Shared Helper to distribute tiles to targets
+ */
+const distributeTiles = (app, startX, startY, m, n, p, q, overlapX, overlapY) => {
+    const X = TILE_CONFIG.SIZES.x;
+    const U = TILE_CONFIG.SIZES.u;
+
+    let x2List = app.tiles.filter(t => t.type === 'x2');
+    let oneList = app.tiles.filter(t => t.type === 'one');
+    let xListPos = app.tiles.filter(t => t.type === 'x' && !t.isNegative);
+    let xListNeg = app.tiles.filter(t => t.type === 'x' && t.isNegative);
+
+    // 1. Place Base x^2
     let x2Idx = 0;
-    for (let row = 0; row < nAbs; row++) {
-        for (let col = 0; col < mAbs; col++) {
+    for (let row = 0; row < n; row++) {
+        for (let col = 0; col < m; col++) {
             if (x2Idx < x2List.length) {
                 const t = x2List[x2Idx++];
-                t.targetX = startX + col * t.xSize;
-                t.targetY = startY + row * t.xSize;
+                t.targetX = startX + col * X;
+                t.targetY = startY + row * X;
             }
         }
     }
 
-    const vStartX = isOverlapX ? (startX + gridW - pAbs * U) : (startX + gridW);
-    const vSignPos = (p * n) > 0;
+    // 2. Vertical Column (associated with p)
+    // If p > 0, place to the right.
+    // If p < 0 (overlapX), place ON the right edge (overlapping).
 
-    // Shared indices
+    const pAbs = Math.abs(p);
+
+    let vStartX;
+    if (overlapX) {
+        // Overlap: align right edge of X-tile with right edge of base
+        // base width = m * X
+        // x-tile width = U (10)
+        // We want x-tile to cover the rightmost strip of the x^2.
+        // Actually, for (x-p), we usually align it inside.
+        // Let's use standard grid logic:
+        // If p is negative, target position shifts left?
+        // standard: startX + m*X (Right edge).
+        // overlap: startX + m*X - pAbs*U ?
+        vStartX = startX + m * X - pAbs * U;
+    } else {
+        vStartX = startX + m * X;
+    }
+
+    // Determine which pool to pull from for vertical column
+    // The sign of the term is derived from n * p.
+    // m is typically positive approx 1. n is 1.
+    // So if p is negative, we use negative tiles.
+    const usePosV = (n * p) > 0;
+
     let posIdx = 0;
     let negIdx = 0;
 
-    // 2. Vertical X (p columns)
     for (let col = 0; col < pAbs; col++) {
-        for (let row = 0; row < nAbs; row++) {
+        for (let row = 0; row < n; row++) {
             let t = null;
-            if (vSignPos) {
+            if (usePosV) {
                 if (posIdx < xListPos.length) t = xListPos[posIdx++];
             } else {
                 if (negIdx < xListNeg.length) t = xListNeg[negIdx++];
             }
 
             if (t) {
-                t.targetX = vStartX + col * t.uSize;
-                t.targetY = startY + row * t.xSize;
-                if (t.rotation === 0) t.rotate(); // Needs to be vertical
+                t.targetX = vStartX + col * U;
+                t.targetY = startY + row * X;
+                if (t.rotation === 0) t.rotate(); // Vertical
             }
         }
     }
 
-    const hStartY = isOverlapY ? (startY + gridH - qAbs * U) : (startY + gridH);
-    const hSignPos = (m * q) > 0;
+    // 3. Horizontal Row (associated with q)
+    const qAbs = Math.abs(q);
 
-    // 3. Horizontal X (q rows)
+    let hStartY;
+    if (overlapY) {
+        hStartY = startY + n * X - qAbs * U;
+    } else {
+        hStartY = startY + n * X;
+    }
+
+    const usePosH = (m * q) > 0;
+
     for (let row = 0; row < qAbs; row++) {
-        for (let col = 0; col < mAbs; col++) {
+        for (let col = 0; col < m; col++) {
             let t = null;
-            if (hSignPos) {
+            if (usePosH) {
                 if (posIdx < xListPos.length) t = xListPos[posIdx++];
             } else {
                 if (negIdx < xListNeg.length) t = xListNeg[negIdx++];
             }
 
             if (t) {
-                t.targetX = startX + col * t.xSize;
-                t.targetY = hStartY + row * t.uSize;
-                if (t.rotation !== 0) t.rotate(); // Needs to be horizontal
+                t.targetX = startX + col * X;
+                t.targetY = hStartY + row * U;
+                if (t.rotation !== 0) t.rotate(); // Horizontal
             }
         }
     }
 
-    // 4. Ones (Corner)
-    const oStartX = vStartX;
-    const oStartY = hStartY;
+    // 4. Corner (Ones)
+    // Placed at intersection of vStartX and hStartY
+    // Sign depends on p * q
+
+    const oneStartX = vStartX;
+    const oneStartY = hStartY;
     let oneIdx = 0;
 
     for (let row = 0; row < qAbs; row++) {
         for (let col = 0; col < pAbs; col++) {
             if (oneIdx < oneList.length) {
                 const t = oneList[oneIdx++];
-                t.targetX = oStartX + col * t.uSize;
-                t.targetY = oStartY + row * t.uSize;
+                t.targetX = oneStartX + col * U;
+                t.targetY = oneStartY + row * U;
             }
         }
     }
-
-    // Start Animation
-    app.isAnimating = true;
-    app.requestRender();
-};
+}

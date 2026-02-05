@@ -8,12 +8,7 @@ export const validateArrangement = (app, silent = false) => {
     }
 
     // Get Input Coefficients
-    const limit = TILE_CONFIG.LIMITS;
-    const clamp = (val) => Math.max(limit.MIN_COEFF, Math.min(limit.MAX_COEFF, val));
-
-    const valA = clamp(parseInt(document.getElementById('coeff-a').value) || 0);
-    const valB = clamp(parseInt(document.getElementById('coeff-b').value) || 0);
-    const valC = clamp(parseInt(document.getElementById('coeff-c').value) || 0);
+    const { a: valA, b: valB, c: valC } = app.getCoefficients();
 
     // Calculate Bounding Box
     let minX = Infinity, minY = Infinity;

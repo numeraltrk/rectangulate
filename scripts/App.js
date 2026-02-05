@@ -253,10 +253,19 @@ export class App {
         }
     }
 
+    getCoefficients() {
+        const limit = TILE_CONFIG.LIMITS;
+        const clamp = (val) => Math.max(limit.MIN_COEFF, Math.min(limit.MAX_COEFF, val));
+
+        const a = clamp(parseInt(document.getElementById('coeff-a').value) || 0);
+        const b = clamp(parseInt(document.getElementById('coeff-b').value) || 0);
+        const c = clamp(parseInt(document.getElementById('coeff-c').value) || 0);
+
+        return { a, b, c };
+    }
+
     updateEquationDisplay() {
-        const a = parseInt(document.getElementById('coeff-a').value) || 0;
-        const b = parseInt(document.getElementById('coeff-b').value) || 0;
-        const c = parseInt(document.getElementById('coeff-c').value) || 0;
+        const { a, b, c } = this.getCoefficients();
 
         // Format terms
         const termA = a !== 0 ? (a === 1 ? 'x^2' : (a === -1 ? '-x^2' : `${a}x^2`)) : '';
